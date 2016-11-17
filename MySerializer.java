@@ -31,7 +31,7 @@ public class MySerializer {
     final String NAME_VALUE="value";
     final String NAME_REFERENCE="reference";
     final String NAME_LENGTH="length";
-    private final List lstPrimitive;
+    private final List<String> lstPrimitive;
     private Document doc;
     private int intId=0;
     public MySerializer(){
@@ -223,7 +223,7 @@ public class MySerializer {
                 element=addObjElement(obj,obj.getClass().getName()); 
             }
             
-            containedValues = ((Collection)rObj).toArray();
+            containedValues = ((Collection<?>)rObj).toArray();
             length=containedValues.length;
             for (int j = 0; j < length; j++){
                 Element vElement=new Element(NAME_VALUE);
@@ -272,7 +272,7 @@ public class MySerializer {
             return String.valueOf( intId-1);
     }
     //check class is collection
-    boolean isCollection(Class c) {
+    boolean isCollection(Class<?> c) {
         if (c.getName().contains("Collection"))
             return true;
         else if (c.getName().equals("Object"))
@@ -290,7 +290,7 @@ public class MySerializer {
         else {
              Class<?> cl=null;
             try{
-                cl=(Class)obj;
+                cl=(Class<?>)obj;
             }
             catch(Exception e){}
             if (cl!=null)
@@ -303,5 +303,182 @@ public class MySerializer {
     }
     boolean chkClassInPackage(Object obj){
         return getPackageName(obj).equals(getPackageName(null));
+    }
+    
+    public String deserialization(String strfileOrXml,boolean blnIsFile){
+        String rObj=""; 
+        try{
+              if(blnIsFile){
+                  FileHandler fh=new FileHandler();
+                  return deserialization(fh.fileReader(strfileOrXml));
+              }
+              else return deserialization(strfileOrXml);
+         }
+         catch(Exception e){
+             System.out.println("a3.MySerializer.deserialization() error: \n"+e.getMessage());
+         }        
+         return rObj;
+    } 
+    String deserialization(String strfileOrXml){
+        String rObj=""; 
+        Map<String, Element> objMap = new HashMap<String, Element>();
+        //creating DOM Document
+        SAXBuilder docBuilder = new SAXBuilder();
+        try{
+            doc=(Document)docBuilder.build(new StringReader(strfileOrXml));
+                
+            List<?> lst =  doc.getRootElement().getChildren(NAME_OBJECT);
+            if(lst.size()>0){
+                for (int i=0;i<lst.size();i++)
+                    objMap.put(((Element) lst.get(i)).getAttributeValue(NAME_ID), (Element) lst.get(i));
+                
+                for (int i=0;i<lst.size();i++){
+                    Element objElement = (Element) lst.get(i);
+                    rObj+= deserializeObject(objElement,objMap);
+                }
+                //System.out.println(rObj);
+            }
+         }
+         catch(Exception e){
+             System.out.println("a3.MySerializer.deserialization() error: \n"+e.getMessage());
+         }        
+         return rObj;
+    }
+    //deserialize object
+    String deserializeObject(Element e,Map<String, Element> objMap){     
+        String rObj="";
+       
+        try{
+            String strName=e.getAttributeValue(NAME_CLASS);
+            String strId=e.getAttributeValue(NAME_ID);
+            String strObj="========== Object(ID: "+strId+")"+" ========== \n";
+             
+            Class<?> cls=Class.forName(strName);
+           
+            if (cls.isArray()){// object array
+                strObj+= deserializeArray(e, cls, objMap);
+            }
+            else if(isCollection(cls)){//object collection
+                strObj+= deserializeCollection(e, cls, objMap);
+            }
+            else{//single object
+                //list field
+                strObj+="Name: "+cls.getSimpleName()+"\n";
+                List<?> lst = e.getChildren(NAME_FIELD);
+                for (int i=0;i<lst.size();i++){
+                    Element ce=(Element)lst.get(i);
+                    String cObj=deserializeField(ce,objMap);
+                    strObj+=cObj;
+                }
+            }
+            rObj=strObj;
+        }
+        catch(Exception ex){
+            System.out.println("a3.MySerializer.deserializeObject error: \n"+ex.getMessage());
+        }
+        return rObj;
+    }
+    
+    //deserialize field 
+    String deserializeField(Element e,Map<String, Element> objMap){     
+        String rObj="";
+        try{
+            String strName=e.getAttributeValue(NAME_FIELDNAME);
+            String strType=e.getAttributeValue(NAME_FIELDTYPE);
+            String simpleTypeName=getSimpleTypeName(strType);           
+            List<?> vlst = e.getChildren(NAME_VALUE);
+            List<?> rlst = e.getChildren(NAME_REFERENCE);
+            //primitive type
+            if (isPrimitiveType(simpleTypeName) ){
+                rObj+="Field: "+simpleTypeName+" "+strName;
+                if (vlst.size()>=1)
+                    rObj+=" = "+convertPrimitiveValue(simpleTypeName,((Element)vlst.get(0)).getText())+"\n";
+            }
+            else{
+                Class<?> cls=Class.forName(strType);
+                if(cls.isArray() )
+                        rObj+="Field: "+cls.getComponentType().getSimpleName()+"[] "+strName+"\n";                   
+                else if(isCollection(cls))  rObj+="Field: "+cls.getSimpleName() +" "+strName+"\n";                   
+                else rObj+="Field: "+simpleTypeName+" "+strName+"\n";
+                if (rlst.size()>=1  ){//Array has length 
+                        String refId=((Element)rlst.get(0)).getText();
+                        rObj+="\tReference: "+refId+"\n";
+                }
+            }
+         }
+         catch(Exception ex){
+             System.out.println("a3.MySerializer.deserializeField error: \n"+ex.getMessage());
+         }
+        return rObj;
+    }
+       
+    //deserialize array object
+    String deserializeArray(Element e,Class<?> cls,Map<String, Element> objMap){
+        String rObj="";
+        String strLen=e.getAttributeValue(NAME_LENGTH);
+    
+        if (strLen!=null &&!strLen.equals("")){
+            rObj+=cls.getComponentType().getSimpleName()+"["+strLen+"]\n"; 
+            List<?> vlst = e.getChildren(NAME_VALUE);
+//            boolean isPrimitive=isPrimitiveType(cls.getComponentType().getSimpleName()) ||!chkClassInPackage(cls.getComponentType());
+            rObj+=vlst.size()==1?"Value:\n":"Values:\n";
+            for(int i=0;i<vlst.size();i++){
+                List<?> rlst =((Element)vlst.get(i)).getChildren(NAME_REFERENCE);
+                if (rlst.size()>0){
+                    String refId=((Element)rlst.get(0)).getText();
+                    rObj+="\tReference: "+refId+"\n";
+                }
+                else
+                    rObj+="\t"+convertPrimitiveValue(cls.getComponentType().getSimpleName(),((Element)vlst.get(i)).getText()) +"\n";
+            }
+        }
+        return rObj;
+    }  
+    //deserialize Collection object
+    String deserializeCollection(Element e,Class<?> cls,Map<String, Element> objMap){
+        String rObj="";
+        String strLen=e.getAttributeValue(NAME_LENGTH);
+    
+        if (strLen!=null &&!strLen.equals("")){
+            rObj+=cls.getSimpleName()+"\n"; 
+            rObj+="Length:"+strLen+"\n";
+            List<?> vlst = e.getChildren(NAME_VALUE);
+            rObj+=vlst.size()==1?"Value:\n":"Values:\n";
+            for(int i=0;i<vlst.size();i++){
+                List<?> rlst =((Element)vlst.get(i)).getChildren(NAME_REFERENCE);
+                if (rlst.isEmpty())//get value directly
+                    rObj+="\t"+((Element)vlst.get(i)).getText()+"\n";
+                else  rObj+="\tReference ID: "+((Element)rlst.get(0)).getText()+"\n";              
+            }
+        }
+        return rObj;
+    } 
+    //get type simple name
+    String getSimpleTypeName(String strType){
+        if (strType.contains("."))
+            return strType.substring(strType.lastIndexOf('.') + 1);
+        return strType;
+    }
+   
+    String convertPrimitiveValue(String simpleTypeName,String sValue){
+        switch (simpleTypeName){
+            case "String":
+                return "\""+sValue+"\"";
+            case "char":
+                return "'"+sValue+"'";
+            default:
+                return sValue;        
+        }
+    }
+  
+   
+    Element findRefElement(String refId){
+        List<?> lst =  doc.getRootElement().getChildren(NAME_OBJECT);
+        for (int i = 0; i < lst.size(); i++) {
+             Element e=(Element)lst.get(i);
+             if (e.getAttribute(NAME_ID).toString().equals(refId))
+                 return e;
+        }
+        return null;
     }
 }
