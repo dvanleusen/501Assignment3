@@ -4,11 +4,11 @@ package a3;
 * @author Daniel Van Leusen
 * Student id: 10064708
 * E-mail: danvanleusen@yahoo.co.uk
-* @version Nov 1, 2016
+* @version Nov 17, 2016
 * <p>
-* This is an object that contains reference to other objects 
+* an object that contains reference to other objects 
 */
-public class Obj2 extends MySerializer{
+public class Obj2  implements InterfaceObj{
     
     private Obj1 owner=new Obj1(10001, true) ;
     private int intAccount; 

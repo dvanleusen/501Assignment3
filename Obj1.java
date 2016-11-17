@@ -1,15 +1,14 @@
 package a3;
-
 /**
 * Assignment 3
 * @author Daniel Van Leusen
 * Student id: 10064708
 * E-mail: danvanleusen@yahoo.co.uk
-* @version Nov 1, 2016
+* @version Nov 17, 2016
 * <p>
-* This is a simple object with only primitive for instance variable. 
+* a simple object with only primitive for instance variable
 */
-public class Obj1 extends MySerializer{
+public class Obj1 implements InterfaceObj{
     private int customerID;
     private boolean check;
     

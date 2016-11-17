@@ -1,4 +1,3 @@
-
 package a3;
 import java.io.*;
 import java.net.*;
@@ -9,12 +8,12 @@ import java.util.ArrayList;
 * @author Daniel Van Leusen
 * Student id: 10064708
 * E-mail: danvanleusen@yahoo.co.uk
-* @version Nov 1, 2016
+* @version Nov 17, 2016
 * <p>
-* Implement a network connection
+* implements network connection
 */
 public class NetworkConnection extends Socket {
-    // declare
+    //declares variables
     static private  String serverAddress="localhost";
     static int listenPort=9999;              
     static private  String localAddress="";
@@ -26,9 +25,12 @@ public class NetworkConnection extends Socket {
         if (nc==null){
             nc=new NetworkConnection();
             try{
+            	//gets local address
                 localAddress=InetAddress.getLocalHost().getHostAddress();
-                boolean blnUseSameComputer=true;   //default use the same computer
+                //default uses the same computer for server and client
+                boolean blnUseSameComputer=true; 
                 try{
+                	//reads host.txt to get Server address and boolean UseSameComputer
                     FileHandler fd=new FileHandler();
                     ArrayList<String>  lst=fd.fileReaderToList("host.txt");
                     for(int i=0;i<lst.size();i++){
@@ -42,7 +44,9 @@ public class NetworkConnection extends Socket {
                     //can't find host.txt, use default "localhost" value as server address
                     serverAddress=localAddress;
                 }
+                //if server is localhost, then server address is the local address
                 if (serverAddress.equals("localhost")||blnUseSameComputer) serverAddress=localAddress;
+                //checks start server and start client
                 blnStartServer=localAddress.equals(serverAddress); 
                 blnStartClient=!blnStartServer||blnUseSameComputer;   
             }
@@ -56,7 +60,10 @@ public class NetworkConnection extends Socket {
     }
     public boolean isStartClient(){
         return blnStartClient;
-    }    
+    }
+    
+    //starts server
+    //server listens and receives xml stream, then deserializes it to objects
     public  void startServer()  {
     (new Thread(){
         @Override
@@ -67,18 +74,17 @@ public class NetworkConnection extends Socket {
             DataOutputStream outStream;
             MySerializer mySerializer=new MySerializer();
             try {
-                 //ServerSocket: listen and accept connections from clients
+                //ServerSocket: listens and accepts connections from clients
                 listener = new ServerSocket(listenPort); 
                 while(true){
-                    // receive input from the client
+                    //receives input from the client
                     clientSocket=listener.accept();
                     System.out.println("========================================\n");
-                    System.out.println("Server reviced message from Client IP: "+ clientSocket.getRemoteSocketAddress()+"\n\n");
-                     //Server's InputStream receive response from the client
+                    System.out.println("Server received message from Client IP: "+ clientSocket.getRemoteSocketAddress()+"\n\n");
+                    //server's InputStream receive response from the client
                     inStream = new DataInputStream(clientSocket.getInputStream());
                     String clientInfo=readInputStream(inStream);
                     
-                    //todo list
                     try{
                          String strDes=mySerializer.deserialization(clientInfo);
                          System.out.println("Server Deserialize:\n");
@@ -91,7 +97,6 @@ public class NetworkConnection extends Socket {
                     //output stream to send information to client
                     outStream = new DataOutputStream(clientSocket.getOutputStream());
                     outStream.writeBytes("13OK!");
-                    //display
                 }
             }
             catch(IOException e){
@@ -100,13 +105,10 @@ public class NetworkConnection extends Socket {
         }
     }).start();
     }
-        
-//    public void startClient(final Object obj) {
+     
+     //starts client
+     //client creates objects, then serializes them to xml stream, which is then sent to server
      public String startClient(final Object obj) {
-//    (new Thread(){
-//        @Override
-//        public void run(){
-            // declaration
             String strResponse="";
             Socket mySocket=null;
             DataInputStream inStream=null;
@@ -114,7 +116,7 @@ public class NetworkConnection extends Socket {
             MySerializer mySerializer=new MySerializer();
                    
             try {
-                    //try to open a socket on port 9999
+                    //tries to open a socket on port 9999
                     mySocket = new Socket(serverAddress, listenPort);
                     //client's InputStream receive response from the server
                     inStream = new DataInputStream(mySocket.getInputStream());
@@ -129,16 +131,18 @@ public class NetworkConnection extends Socket {
             }
             if (mySocket!=null && inStream!=null && outStream!=null){
                 try{
-                    //send bytes to server 
-    //                outStream.writeBytes("HELLO\n");
+                    //sends bytes to server 
                     String strXml=mySerializer.serialization(obj);
                     System.out.println("Client Send:\n========================================\n");
                     System.out.println(strXml);
                     System.out.println("========================================\n");
                     long lenXml=strXml.length();
+                    //for socket communication, first digit is the number of digits of length
+                    //following digits represent length of stream
                     strXml=String.valueOf( String.valueOf(lenXml).length())+String.valueOf(lenXml)+strXml;
                     outStream.writeBytes(strXml);
-                    //get server's response            
+                    //gets server's response    
+                    //tries 10 time to get response, then time out
                     int tryTime=10;                  
                    
                     while (strResponse.equals("") && tryTime>0){
@@ -147,7 +151,7 @@ public class NetworkConnection extends Socket {
                          tryTime--;
                     }
                     
-                    //close stream and socket
+                    //closes stream and socket
                     inStream.close();
                     outStream.close();
                     mySocket.close();     
@@ -162,12 +166,10 @@ public class NetworkConnection extends Socket {
                 }
             }
             return strResponse;
-//        }
-//    }).start();
     }
     
+    //reads incoming stream
     static String readInputStream(DataInputStream inStream){
-    //first byte:length of bytes providing length arrive in binary format
         String strReturn="";
         byte[] buffer=new byte[1024]; 
         try{
@@ -179,11 +181,13 @@ public class NetworkConnection extends Socket {
                 bRead=inStream.read();
                 bytesToRead=bytesToRead*10 +Integer.parseInt(String.valueOf((char) bRead));
             }
+            
             int bytesRead=0;
             while(strReturn.length() != bytesToRead )
             {
                 bytesRead = inStream.read(buffer);
-                if (bytesRead==-1)                      //end of stream
+                //end of stream
+                if (bytesRead==-1)
                     break;
                 else
                     strReturn += new String(buffer, 0, bytesRead);

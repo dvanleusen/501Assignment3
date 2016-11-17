@@ -7,11 +7,11 @@ import java.util.ArrayList;
 * @author Daniel Van Leusen
 * Student id: 10064708
 * E-mail: danvanleusen@yahoo.co.uk
-* @version Nov 1, 2016
+* @version Nov 17, 2016
 * <p>
 * an object that uses an instance of collection classes 
 */
-public class Obj5 extends MySerializer{
+public class Obj5  implements InterfaceObj{
     
     private ArrayList favorBooks;
    

@@ -1,4 +1,3 @@
-
 package a3;
 
 import java.io.FileWriter;
@@ -14,12 +13,12 @@ import org.jdom.output.*;
 * @author Daniel Van Leusen
 * Student id: 10064708
 * E-mail: danvanleusen@yahoo.co.uk
-* @version Nov 1, 2016
+* @version Nov 17, 2016
 * <p>
-* This is object serializer. Implement object serilizing and seserializing.
+* this is object serializer, which implements object serialization and deserialization
 */
 public class MySerializer {
-    //declare constants
+    //declares constants
     final String NAME_SERIALIZED="serialized";
     final String NAME_OBJECT="object";    
     final String NAME_CLASS="class";
@@ -34,43 +33,44 @@ public class MySerializer {
     private final List<String> lstPrimitive;
     private Document doc;
     private int intId=0;
+    
+    //creates a string array of primitives, which is used later on to check for primitives
     public MySerializer(){
         String[] a=new String[]{"byte","short","int","long","float","double","boolean","char"};
         lstPrimitive=Arrays.asList(a);
     }
+    
     public String serialization(Object obj) throws IOException{
         //initialization
         intId=0;
 
-        //add root element to xml document
+        //adds root element to xml document
         Element element=new Element(NAME_SERIALIZED);
         doc =new Document();
         doc.setRootElement(element);
-        //add class object
+        //adds class object
         serializationObj(obj);
         return outputXML("output.xml");
     }
        
-    //serialize object 
+    //serializes object 
     Element serializationObj(Object obj){
         Element element=null;
-          //add object element  
-       
+        //adds object element  
+        //checks if it is an array object
         if ( obj.getClass().isArray()){
             addArrayContent(obj,null);   
         }
+        //checks if it is a collection object (list, arrayList, etc.)
         else if  (isCollection(obj.getClass()))
             addCollectionContent(obj, null);
  
-        else {// not array and collection
-            
+        else {
             element=addObjElement(obj, obj.getClass().getName());
             Field[] fields=obj.getClass().getDeclaredFields();
 
-            //add field elements
-                
+            //adds field elements
             if (obj.getClass().getDeclaredFields().length>0){
-              
                 for (int i=0;i<fields.length;i++){
                     fields[i].setAccessible(true);
                     serializationField(element,obj,fields[i]);
@@ -79,7 +79,7 @@ public class MySerializer {
         }
         return element;
     }
-    //serialize fields 
+    //serializes fields 
     void serializationField(Element parent,Object obj,Field f) throws IllegalArgumentException{
         //field basic information 
         Element element=new Element(NAME_FIELD);
@@ -92,19 +92,21 @@ public class MySerializer {
         try{
             vObj=f.get(obj).toString();
         }
-        catch(Exception e){
-            
-        }
+        catch(Exception e){}
        
+        //checks if field is an array, adds reference element
         if ( f.getType().isArray()){
             refElement= addArrayContent(obj, f);
          }
         else {
+        	//checks if field is collection
+        	//if so, adds reference element
             boolean blnCollection=isCollection(f.getType());
             if (blnCollection)
                 refElement= addCollectionContent(obj, f);
             else {
-                if (!isPrimitiveType(  f.getType().getSimpleName())&& chkClassInPackage(f.getType())){ //reference object
+            	//if not primitive, adds reference element
+                if (!isPrimitiveType(f.getType().getSimpleName())&& chkClassInPackage(f.getType())){
                     try{
                         Object refObj=f.get(obj);
                         if (refObj==null)
@@ -112,11 +114,13 @@ public class MySerializer {
                         else
                             refElement= serializationObj(refObj);
                     }
-                    catch(Exception e){// object value is null, only add object class name
+                    //if object value is null, only adds object class name
+                    catch(Exception e){
                         refElement= addObjElement(null, f.getType().getName());
                    }
                 } 
-                else{ //isPrimitive
+                //if is primitive, adds value
+                else{
                     if (!isPrimitiveType(f.getType().getSimpleName()) && !f.getType().getName().contains("java")){
                         element.setAttribute(NAME_FIELDTYPE, "java.lang."+f.getType().getName().substring(0, 1).toUpperCase() + f.getType().getName().substring(1)); 
                     }
@@ -132,17 +136,19 @@ public class MySerializer {
         }
          parent.addContent(element);
     }
-    //add an object element under root element 
+    
+    //adds an object element under root element 
     Element addObjElement(Object obj,String strClass){
-        //add object element
+        //adds object element
         String strId=findId(obj);
         Element element=new Element(NAME_OBJECT);
         element.setAttribute(NAME_CLASS, strClass);
         element.setAttribute(NAME_ID, strId);
         doc.getRootElement().addContent(element);          
         return element;
-    }  
-    //serialize an array
+    } 
+    
+    //serializes an array
     Element addArrayContent(Object obj,Field field) {
         Element element=null;
         Object rObj=obj;
@@ -150,6 +156,7 @@ public class MySerializer {
         Element refElement;
         String strRefClass="";
         int length=0;
+        //adds object element, and then checks component types
         try{
             if (field!=null){
                 element=addObjElement(obj,field.getType().getName());  
@@ -164,6 +171,7 @@ public class MySerializer {
             }
             length = Array.getLength(rObj);
 
+            //if value is not primitive, gets reference element again
             if (blnIsNotPrimitive){
                     for (int j = 0; j < length; j++){
                        try{ 
@@ -177,7 +185,7 @@ public class MySerializer {
                     }
                 }
                 else{
-                	// component type is primitive
+                	//component type is primitive, then just gets its value
                     for (int j = 0; j < length; j++){
                         try{
                             element.addContent(new Element(NAME_VALUE).setText( Array.get(rObj, j).toString()));
@@ -194,6 +202,7 @@ public class MySerializer {
         return element;
     }
     
+    //gets component types
     String getComponentType(String  strArrayType){
         if (strArrayType.equals("[B")) return "byte";
         else if (strArrayType.equals("[S")) return "short"; 
@@ -205,7 +214,8 @@ public class MySerializer {
         else if (strArrayType.equals("[C")) return "char"; 
         else return strArrayType.substring(2,strArrayType.length()-1);
     }
-    //serialize a collection
+    
+    //serializes a collection
     Element addCollectionContent(Object obj,Field field) {
         Element element=null;
         Object rObj=obj;
@@ -214,6 +224,7 @@ public class MySerializer {
         String strRefClass="";
         int length=0;
         Object[] containedValues;
+        
         try{
             if (field!=null){
                 element=addObjElement(obj,field.getType().getName());  
@@ -223,6 +234,7 @@ public class MySerializer {
                 element=addObjElement(obj,obj.getClass().getName()); 
             }
             
+            //takes out collection values, and adds them to an Object array
             containedValues = ((Collection<?>)rObj).toArray();
             length=containedValues.length;
             for (int j = 0; j < length; j++){
@@ -230,48 +242,50 @@ public class MySerializer {
                 try{ 
                    refElement=null;
                    blnIsNotPrimitive=chkClassInPackage( containedValues[j]);
+                   //if it is an array, recursively finds its reference element
                    if (containedValues[j].getClass().isArray())
                        refElement=addArrayContent(containedValues[j],null);
+                   //if it is not a primitive, recursively finds reference element
                    else if(blnIsNotPrimitive)
                        refElement=serializationObj(containedValues[j]);
+                   //if primitive, sets basic information
                    else  vElement.setText(containedValues[j].toString());
                 }
                 catch(Exception e){
                     refElement= addObjElement(null, strRefClass);
                 }
               
+                //adds reference ID if there is a reference element
                 if (refElement!=null)
                     vElement.addContent(new Element(NAME_REFERENCE).setText( refElement.getAttributeValue(NAME_ID)));
                 
                 element.addContent(vElement);
             }
         }
-        catch (Exception e){
-            
-        }
+        catch (Exception e){}
      
         if (element!=null)     element.setAttribute(NAME_LENGTH, String.valueOf(length));
         return element;
     }
-    //save XML Document to a file
+    //saves XML Document to a file
     public String outputXML(String fileName) throws IOException{
-        // xml document to file
-	XMLOutputter xmlOutput = new XMLOutputter();
-	// display nice nice
-	xmlOutput.setFormat(Format.getPrettyFormat());
+		XMLOutputter xmlOutput = new XMLOutputter();
+		//sets XML format
+		xmlOutput.setFormat(Format.getPrettyFormat());
       	xmlOutput.output(doc, new FileWriter(fileName));
         return xmlOutput.outputString(doc);
     }
-    //
+
     boolean isPrimitiveType(String sType){
         return lstPrimitive.contains(sType);
     }
-     //find object unique identifier number
+    
+    //finds object unique identifier number
     String findId(Object obj){    
             intId++;
             return String.valueOf( intId-1);
     }
-    //check class is collection
+    //checks class is a collection
     boolean isCollection(Class<?> c) {
         if (c.getName().contains("Collection"))
             return true;
@@ -281,9 +295,8 @@ public class MySerializer {
             return isCollection(c.getSuperclass());
         else return false;
     }
-    public String getObjectDescrpition(){
-        return "";
-    }
+
+    //gets package name
     String getPackageName(Object obj){
         if (obj==null) 
             return this.getClass().getPackage().getName();
@@ -301,10 +314,12 @@ public class MySerializer {
                 return obj.getClass().getDeclaringClass().getPackage().getName();
         }
     }
+    
     boolean chkClassInPackage(Object obj){
         return getPackageName(obj).equals(getPackageName(null));
     }
     
+    //if xml stream deserializes, returns a string of object info
     public String deserialization(String strfileOrXml,boolean blnIsFile){
         String rObj=""; 
         try{
@@ -318,15 +333,17 @@ public class MySerializer {
              System.out.println("a3.MySerializer.deserialization() error: \n"+e.getMessage());
          }        
          return rObj;
-    } 
+    }
+    
     String deserialization(String strfileOrXml){
         String rObj=""; 
         Map<String, Element> objMap = new HashMap<String, Element>();
-        //creating DOM Document
+        //creates DOM Document
         SAXBuilder docBuilder = new SAXBuilder();
         try{
             doc=(Document)docBuilder.build(new StringReader(strfileOrXml));
-                
+
+            //gets objects elements
             List<?> lst =  doc.getRootElement().getChildren(NAME_OBJECT);
             if(lst.size()>0){
                 for (int i=0;i<lst.size();i++)
@@ -336,7 +353,6 @@ public class MySerializer {
                     Element objElement = (Element) lst.get(i);
                     rObj+= deserializeObject(objElement,objMap);
                 }
-                //System.out.println(rObj);
             }
          }
          catch(Exception e){
@@ -344,7 +360,8 @@ public class MySerializer {
          }        
          return rObj;
     }
-    //deserialize object
+    
+    //deserializes object
     String deserializeObject(Element e,Map<String, Element> objMap){     
         String rObj="";
        
@@ -355,14 +372,14 @@ public class MySerializer {
              
             Class<?> cls=Class.forName(strName);
            
-            if (cls.isArray()){// object array
+            //checks type of object
+            if (cls.isArray()){
                 strObj+= deserializeArray(e, cls, objMap);
             }
-            else if(isCollection(cls)){//object collection
+            else if(isCollection(cls)){
                 strObj+= deserializeCollection(e, cls, objMap);
             }
-            else{//single object
-                //list field
+            else{
                 strObj+="Name: "+cls.getSimpleName()+"\n";
                 List<?> lst = e.getChildren(NAME_FIELD);
                 for (int i=0;i<lst.size();i++){
@@ -379,7 +396,7 @@ public class MySerializer {
         return rObj;
     }
     
-    //deserialize field 
+    //deserializes field 
     String deserializeField(Element e,Map<String, Element> objMap){     
         String rObj="";
         try{
@@ -392,7 +409,7 @@ public class MySerializer {
             if (isPrimitiveType(simpleTypeName) ){
                 rObj+="Field: "+simpleTypeName+" "+strName;
                 if (vlst.size()>=1)
-                    rObj+=" = "+convertPrimitiveValue(simpleTypeName,((Element)vlst.get(0)).getText())+"\n";
+                    rObj+=" = "+convertValue(simpleTypeName,((Element)vlst.get(0)).getText())+"\n";
             }
             else{
                 Class<?> cls=Class.forName(strType);
@@ -412,7 +429,7 @@ public class MySerializer {
         return rObj;
     }
        
-    //deserialize array object
+    //deserializes array object
     String deserializeArray(Element e,Class<?> cls,Map<String, Element> objMap){
         String rObj="";
         String strLen=e.getAttributeValue(NAME_LENGTH);
@@ -420,7 +437,6 @@ public class MySerializer {
         if (strLen!=null &&!strLen.equals("")){
             rObj+=cls.getComponentType().getSimpleName()+"["+strLen+"]\n"; 
             List<?> vlst = e.getChildren(NAME_VALUE);
-//            boolean isPrimitive=isPrimitiveType(cls.getComponentType().getSimpleName()) ||!chkClassInPackage(cls.getComponentType());
             rObj+=vlst.size()==1?"Value:\n":"Values:\n";
             for(int i=0;i<vlst.size();i++){
                 List<?> rlst =((Element)vlst.get(i)).getChildren(NAME_REFERENCE);
@@ -429,12 +445,13 @@ public class MySerializer {
                     rObj+="\tReference: "+refId+"\n";
                 }
                 else
-                    rObj+="\t"+convertPrimitiveValue(cls.getComponentType().getSimpleName(),((Element)vlst.get(i)).getText()) +"\n";
+                    rObj+="\t"+convertValue(cls.getComponentType().getSimpleName(),((Element)vlst.get(i)).getText()) +"\n";
             }
         }
         return rObj;
-    }  
-    //deserialize Collection object
+    } 
+    
+    //deserializes Collection object
     String deserializeCollection(Element e,Class<?> cls,Map<String, Element> objMap){
         String rObj="";
         String strLen=e.getAttributeValue(NAME_LENGTH);
@@ -453,14 +470,16 @@ public class MySerializer {
         }
         return rObj;
     } 
-    //get type simple name
+    
+    //gets type simple name
     String getSimpleTypeName(String strType){
         if (strType.contains("."))
             return strType.substring(strType.lastIndexOf('.') + 1);
         return strType;
     }
    
-    String convertPrimitiveValue(String simpleTypeName,String sValue){
+    //prints corresponding symbols with types
+    String convertValue(String simpleTypeName,String sValue){
         switch (simpleTypeName){
             case "String":
                 return "\""+sValue+"\"";
@@ -471,7 +490,7 @@ public class MySerializer {
         }
     }
   
-   
+    //finds reference element
     Element findRefElement(String refId){
         List<?> lst =  doc.getRootElement().getChildren(NAME_OBJECT);
         for (int i = 0; i < lst.size(); i++) {

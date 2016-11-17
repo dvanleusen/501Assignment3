@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package a3;
 
 import java.util.Scanner;
@@ -11,14 +6,15 @@ import java.util.Scanner;
 * @author Daniel Van Leusen
 * Student id: 10064708
 * E-mail: danvanleusen@yahoo.co.uk
-* @version Nov 1, 2016
+* @version Nov 17, 2016
 * <p>
-* Create arbitrary objects using text-based menu
+* creates arbitrary objects using text-based menu
 */
 public class ObjectCreator {
     public ObjectCreator() {}
     public String textBasedMenu(){
    
+    	//prompts user to select type of object to be created
         System.out.println("-- Select an object option--\n"+
             "Select an option: \n" +
             "  1) An object that contains only primitives\n" +
@@ -28,6 +24,7 @@ public class ObjectCreator {
             "  5) An object that uses an instance of collection classes \n" +         
             "  6) Exit\n ");
         
+        //scans user input
         Scanner input = new Scanner(System.in);
         try{
             int intSelection = input.nextInt();
@@ -40,9 +37,10 @@ public class ObjectCreator {
         }
     } 
     
+    //creates objects according to user input
     public String doAction(int intSelection, boolean isTest){
         String strReturn="";
-        MySerializer myObject=null;
+        InterfaceObj myObject=null;
         switch (intSelection) {
             case 1:
                 myObject=new Obj1(1000,true);
@@ -72,8 +70,9 @@ public class ObjectCreator {
             System.out.println("Serialize "+myObject.getObjectDescrpition());
             if (!isTest){
 	            try{
+	            	 //starts client to serialize objects created and sends to server
 	                 NetworkConnection.getNetworkConnection().startClient(myObject);
-	                 Thread.sleep(3000);
+	                 Thread.sleep(200);
 	            }
 	            catch(Exception e){
 	                System.out.println("a3.ObjectCreator.doAction() Error: "+e.getMessage());
