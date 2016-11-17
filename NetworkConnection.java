@@ -39,7 +39,7 @@ public class NetworkConnection extends Socket {
                     }
                 }
                 catch(Exception e){
-                    //can't find host.txt, use defult "localhost" value as server address
+                    //can't find host.txt, use default "localhost" value as server address
                     serverAddress=localAddress;
                 }
                 if (serverAddress.equals("localhost")||blnUseSameComputer) serverAddress=localAddress;

@@ -32,7 +32,7 @@ public class ObjectCreator {
         try{
             int intSelection = input.nextInt();
             input.nextLine();
-            return doAction(intSelection);
+            return doAction(intSelection, false);
         }
         catch(Exception e){
             System.out.println("Error: "+e.getMessage());
@@ -40,7 +40,7 @@ public class ObjectCreator {
         }
     } 
     
-    public String doAction(int intSelection){
+    public String doAction(int intSelection, boolean isTest){
         String strReturn="";
         MySerializer myObject=null;
         switch (intSelection) {
@@ -70,6 +70,15 @@ public class ObjectCreator {
             return strReturn;
         else{
             System.out.println("Serialize "+myObject.getObjectDescrpition());
+            if (!isTest){
+	            try{
+	                 NetworkConnection.getNetworkConnection().startClient(myObject);
+	                 Thread.sleep(3000);
+	            }
+	            catch(Exception e){
+	                System.out.println("a3.ObjectCreator.doAction() Error: "+e.getMessage());
+	            }
+            }
             return myObject.getObjectDescrpition();
         }     
     }
