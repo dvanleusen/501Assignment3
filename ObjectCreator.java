@@ -6,7 +6,6 @@
 package a3;
 
 import java.util.Scanner;
-import java.lang.reflect.*;
 /**
 * Assignment 3
 * @author Daniel Van Leusen
@@ -18,17 +17,16 @@ import java.lang.reflect.*;
 */
 public class ObjectCreator {
     public ObjectCreator() {}
-    private MySerializer myObject;
     public String textBasedMenu(){
    
         System.out.println("-- Select an object option--\n"+
             "Select an option: \n" +
-            "  Press 1 for an object that contains only primitives\n" +
-            "  Press 2 for an object that contains reference to other objects\n" +
-            "  Press 3 for an object that contains an array of primitives \n" +
-            "  Press 4 for an object that contains an array of object references \n" +
-            "  Press 5 for an object that uses an instance of collection classes \n" +         
-            "  Press 6 to exit\n ");
+            "  1) An object that contains only primitives\n" +
+            "  2) An object that contains reference to other objects\n" +
+            "  3) An object that contains an array of primitives \n" +
+            "  4) An object that contains an array of object references \n" +
+            "  5) An object that uses an instance of collection classes \n" +         
+            "  6) Exit\n ");
         
         Scanner input = new Scanner(System.in);
         try{
@@ -44,7 +42,7 @@ public class ObjectCreator {
     
     public String doAction(int intSelection){
         String strReturn="";
-        myObject=null;
+        MySerializer myObject=null;
         switch (intSelection) {
             case 1:
                 myObject=new Obj1(1000,true);
@@ -68,9 +66,11 @@ public class ObjectCreator {
                 strReturn="Invalid selection";
                 break;
         }
-        
         if (!strReturn.equals(""))
             return strReturn;
-        else return myObject.getObjectDescrpition();
+        else{
+            System.out.println("Serialize "+myObject.getObjectDescrpition());
+            return myObject.getObjectDescrpition();
+        }     
     }
 }
